@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{B8F7C816-B7DE-428A-8625-76A727A8BC6C}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="MyAlgDemoProj.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DirectPrint.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="MyAlgDemoProj">
+        <MSBuild Projects="MyAlgDemoProj.dproj"/>
+    </Target>
+    <Target Name="MyAlgDemoProj:Clean">
+        <MSBuild Projects="MyAlgDemoProj.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MyAlgDemoProj:Make">
+        <MSBuild Projects="MyAlgDemoProj.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DirectPrint">
+        <MSBuild Projects="DirectPrint.dproj"/>
+    </Target>
+    <Target Name="DirectPrint:Clean">
+        <MSBuild Projects="DirectPrint.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DirectPrint:Make">
+        <MSBuild Projects="DirectPrint.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="MyAlgDemoProj;DirectPrint"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="MyAlgDemoProj:Clean;DirectPrint:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="MyAlgDemoProj:Make;DirectPrint:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
