@@ -27,10 +27,6 @@ object Form2: TForm2
     VertScrollBar.Tracking = True
     Align = alClient
     TabOrder = 0
-    ExplicitLeft = 104
-    ExplicitTop = 72
-    ExplicitWidth = 185
-    ExplicitHeight = 41
     object ImagePreview: TImage
       Left = 0
       Top = 0

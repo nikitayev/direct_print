@@ -11,9 +11,9 @@ type
     ScrollBox1: TScrollBox;
     ImagePreview: TImage;
     procedure FormCreate(Sender: TObject);
-  Private
+  private
     { Private declarations }
-  Public
+  public
     { Public declarations }
   end;
 
@@ -26,7 +26,7 @@ implementation
 
 procedure TForm2.FormCreate(Sender: TObject);
 begin
-  DoubleBuffered := True;
+  DoubleBuffered := true;
 end;
 
 end.

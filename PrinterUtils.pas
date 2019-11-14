@@ -130,7 +130,7 @@ implementation
 function FloatRect(Left, Top, Right, Bottom: double): TFloatRect;
 begin
   Result.Left := Left;
-  Result.Top := Top;
+  Result.Top  := Top;
   Result.Right := Right;
   Result.Bottom := Bottom;
 end;
@@ -178,7 +178,7 @@ begin
   with DevMode^ do
   begin
     dmFields := dmFields or DM_PAPERSIZE;
-    DevMode^.dmPaperSize := Dword(Value)
+    DevMode^.dmPaperSize := Dword(Value);
   end;
 
   Printer.SetPrinter(ADevice, ADriver, APort, DeviceHandle);
@@ -215,6 +215,7 @@ end;
 
 procedure GetPaperSizes(PaperSize: TPageSizes; PixelPerInchX, PixelPerInchY: integer;
   out WidthInch, HeightInch: double; out PixelWidth, PixelHeight: double);
+
   procedure SetSizeInMM(out Width, Height: double; const WidthCm, HeightCm: double);
   begin
     Width := WidthCm * CmPerInch * 0.1;
@@ -242,10 +243,10 @@ end;
 constructor TWmfPage.Create(const LeftMarginCm, TopMarginCm, RightMarginCm, BottomMarginCm: double);
 begin
   FLeftMarginCm := LeftMarginCm;
-  FTopMarginCm := TopMarginCm;
+  FTopMarginCm  := TopMarginCm;
   FRightMarginCm := RightMarginCm;
   FBottomMarginCm := BottomMarginCm;
-  FOrientation := Printer.Orientation;
+  FOrientation  := Printer.Orientation;
   Create;
 end;
 
@@ -293,7 +294,7 @@ end;
 function TWmfPage.GetMaxDimensionsInCm: TFloatRect;
 begin
   Result.Left := 0;
-  Result.Top := 0;
+  Result.Top  := 0;
   Result.Right := FMaxXPositionCM;
   Result.Bottom := FMaxYPositionCM;
 end;
@@ -313,12 +314,13 @@ end;
 function TWmfPage.GetRectCm2Pixels(const rect: TFloatRect): TRect;
 begin
   Result.Left := Round((rect.Left + FLeftMarginCm) * InchPerCm * printerResX);
-  Result.Top := Round((rect.Top + FTopMarginCm) * InchPerCm * printerResY);
+  Result.Top  := Round((rect.Top + FTopMarginCm) * InchPerCm * printerResY);
   Result.Right := Round((rect.Right + FLeftMarginCm) * InchPerCm * printerResX);
   Result.Bottom := Round((rect.Bottom + FTopMarginCm) * InchPerCm * printerResY);
 end;
 
 procedure TWmfPage.InitPrintSettings(Orientation: TPrinterOrientation);
+
   function GetMargin(Margin: double; inX: boolean): double;
   begin
     Result := Margin;
@@ -338,9 +340,9 @@ begin
   printerResY := GetDeviceCaps(printer.handle, LOGPIXELSY);
   PageWidthInch := GetDeviceCaps(printer.handle, PHYSICALWIDTH) / printerResX;
   PageHeightInch := GetDeviceCaps(printer.handle, PHYSICALHEIGHT) / printerResY;
-  minmarginX := GetDeviceCaps(printer.handle, PHYSICALOFFSETX) / printerResX;
-  minmarginY := GetDeviceCaps(printer.handle, PHYSICALOFFSETY) / printerResY;
-  outputarea := FloatRect(
+  minmarginX  := GetDeviceCaps(printer.handle, PHYSICALOFFSETX) / printerResX;
+  minmarginY  := GetDeviceCaps(printer.handle, PHYSICALOFFSETY) / printerResY;
+  outputarea  := FloatRect(
     GetMargin(InchPerCm * FLeftMarginCm, true),
     GetMargin(InchPerCm * FTopMarginCm, false),
     PageWidthInch - GetMargin(InchPerCm * FRightMarginCm, true),
@@ -354,7 +356,7 @@ begin
   // make preview
   ScreenRect := Rect(0, 0, round(PageWidthInch * Screen.PixelsPerInch),
     round(PageHeightInch * Screen.PixelsPerInch));
-  if (FCanvas <> nil) then  
+  if (FCanvas <> nil) then
     FreeAndNil(FCanvas);
   DestCanvas.StretchDraw(ScreenRect, Self);
   FCanvas := TMetafileCanvas.Create(Self, 0);
@@ -492,8 +494,8 @@ var
   zFrame: integer;
   zFramesCount: integer;
   zPageDimCM: TFloatRect;
-  zPage: TWMFPage;
-  zRect: TRect;
+  zPage:  TWMFPage;
+  zRect:  TRect;
 begin
   inherited Create(true);
   // определим размер оригинальной площади вывода (может быть больше листа)
@@ -501,17 +503,17 @@ begin
   zFramesCount := Trunc(1 + zPageDimCM.Bottom * InchPerCm / BigPage.PageHeightInch);
   // прямоугольник текущего формата листа с отступами от края
   zRect := BigPage.WmfOutputRect;
- 
+
   for zFrame := 0 to zFramesCount - 1 do
   begin
     zPage := TWMFPage.Create(BigPage.LeftMarginCm,
       BigPage.TopMarginCm, BigPage.RightMarginCm, BigPage.BottomMarginCm);
 
-    zPage.Canvas.Brush.Style:=bsSolid;
-    zPage.Canvas.Pen.Mode:=pmCopy;
-    zPage.Canvas.Pen.Style:=psSolid;
+    zPage.Canvas.Brush.Style := bsSolid;
+    zPage.Canvas.Pen.Mode := pmCopy;
+    zPage.Canvas.Pen.Style := psSolid;
     zPage.Canvas.CopyMode := cmSrcCopy;
-    
+
     zPage.Canvas.Draw(0, -printer.PageHeight * zFrame, BigPage);
 
     inherited Add(zPage);
