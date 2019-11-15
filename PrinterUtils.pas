@@ -121,9 +121,9 @@ function GetPageCanvas(WmfPage: TWmfPage): TMetafileCanvas;
 function FloatRect(Left, Top, Right, Bottom: double): TFloatRect;
 function GetPixelCountFromInchSize(const Inches: double; PixelPerInch: integer): integer;
 function GetPixelCountFromCmSize(const Centimeters: double; PixelPerInch: integer): integer;
-procedure GetPaperSizes(PaperSize: TPageSizes; PixelPerInchX, PixelPerInchY: integer;
-  out WidthInch, HeightInch: double; out PixelWidth, PixelHeight: double);
-procedure SetPaperSize(const Value: TPageSizes);
+//procedure GetPaperSizes(PaperSize: TPageSizes; PixelPerInchX, PixelPerInchY: integer;
+//  out WidthInch, HeightInch: double; out PixelWidth, PixelHeight: double);
+//procedure SetPaperSize(const Value: TPageSizes);
 
 implementation
 
@@ -155,7 +155,7 @@ function GetPixelCountFromCmSize(const Centimeters: double; PixelPerInch: intege
 begin
   result := GetPixelCountFromInchSize(Centimeters * CmPerInch, PixelPerInch);
 end;
-
+{
 procedure SetPaperSize(const Value: TPageSizes);
 var
   ADevice, ADriver, APort: array [0..255] of char;
@@ -163,7 +163,7 @@ var
   DevMode: PDeviceMode;
 begin
 
-  {взято из Пачеко, т.1}
+  //взято из Пачеко, т.1
   Printer.GetPrinter(ADevice, ADriver, APort, DeviceHandle);
   if DeviceHandle = 0 then
   begin
@@ -186,7 +186,7 @@ begin
   if not DeviceHandle = 0 then
     GlobalUnlock(DeviceHandle);
 
-  {AdjustImageSize;}
+  //AdjustImageSize;
 end;
 
 function GetPaperSize: DWORD;
@@ -231,7 +231,7 @@ begin
   PixelWidth := PixelPerInchX * WidthInch;
   PixelHeight := PixelPerInchY * HeightInch;
 end;
-
+}
 
 { TWmfPage }
 

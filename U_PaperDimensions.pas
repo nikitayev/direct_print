@@ -11,7 +11,7 @@ const
   InchPerMM = InchPerCm / 10;
 
 type
-
+  {
   TPageSizes = (DMPAPER_UNKNOWN, DMPAPER_LETTER, DMPAPER_LETTERSMALL,
     DMPAPER_TABLOID, DMPAPER_LEDGER, DMPAPER_LEGAL,
     DMPAPER_STATEMENT, DMPAPER_EXECUTIVE,
@@ -23,14 +23,16 @@ type
     DMPAPER_A4_ROTATED = 77,
     DMPAPER_A5_ROTATED = 78
     );
+    }
 
   TPaperSize = record
     MMWidth, MMHeight: double;
   end;
 
-  TPaperDimensions = array [TPageSizes] of TPaperSize;
-
+  //TPaperDimensions = array [TPageSizes] of TPaperSize;
+{
 var
+
   PaperDimensions: TPaperDimensions =
     (
     (MMWidth: 10; MMHeight: 10), // DMPAPER_UNKNOWN     0
@@ -113,7 +115,7 @@ var
     (MMWidth: 297; MMHeight: 210), // A4 Rotated 297 x 210 mm
     (MMWidth: 210; MMHeight: 148)  // A5 Rotated 210 x 148 mm
     );
-
+    }
 implementation
 
 end.

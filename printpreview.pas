@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  StdCtrls, ExtCtrls, ComCtrls, U_PaperDimensions;
+  StdCtrls, ExtCtrls, ComCtrls, U_PaperDimensions, WinSpool;
 
 type
   TForm1 = class(TForm)
@@ -47,6 +47,8 @@ type
     WmfPage: TMetafile;
     procedure InitPrintingCanvas(aMonitorDPI, aZOOM: integer);
     procedure DrawDemoImage1();
+    procedure DrawDemoImage2();
+    procedure DrawDemoImage3();
   public
     { Public declarations }
   end;
@@ -69,6 +71,109 @@ function TextHeightScreen2Printer(Height: integer; printerResY: integer): intege
 begin
   // соответствие системе СИ: http://verstka.otrok.ru/law/punkt2.html
   result := round(Height * Cm2Pixel(1, printerResY) * 0.0351);
+end;
+
+// http://delphimaster.net/view/2-1327473823/all
+procedure setPageSize1(Width, Height: smallint);
+var
+  HPrinter: THandle;
+  InfoSize, BytesNeeded: cardinal;
+  DevMode: PDeviceMode;
+  PI2: PPrinterInfo2;
+  PrinterDefaults: TPrinterDefaults;
+begin
+  with PrinterDefaults do
+  begin
+    DesiredAccess := PRINTER_ACCESS_USE;
+    pDatatype := nil;
+    PDEVMODE  := nil;
+  end;
+  if OpenPrinter(PWideChar(Printer.Printers[Printer.PrinterIndex]), HPrinter, @PrinterDefaults) then
+  begin
+    try
+      SetLastError(0);
+      if not GetPrinter(HPrinter, 2, nil, 0, @BytesNeeded) then
+      begin
+        PI2 := AllocMem(BytesNeeded);
+        try
+          InfoSize := SizeOf(TPrinterInfo2);
+          if GetPrinter(HPrinter, 2, PI2, BytesNeeded, @BytesNeeded) then
+          begin
+            DevMode := PI2.PDEVMODE;
+            DevMode.dmFields := DevMode.dmFields or DM_PAPERSIZE or DM_PAPERWIDTH or DM_PAPERLENGTH;
+            DevMode.dmPaperSize := DMPAPER_USER;
+            DevMode.dmPaperWidth := Width;
+            DevMode.dmPaperLength := Height;
+            PI2.pSecurityDescriptor := nil;
+            if DocumentProperties(0, HPrinter, PWideChar(Printer.Printers[Printer.PrinterIndex]),
+              PI2.PDEVMODE^, PI2.PDEVMODE^,
+              DM_IN_BUFFER or DM_OUT_BUFFER) = IDOK then
+            begin
+              WinSpool.setPrinter(HPrinter, 2, PI2, 0);
+            end;
+          end;
+        finally
+          FreeMem(PI2, BytesNeeded);
+        end;
+      end;
+    finally
+      ClosePrinter(HPrinter);
+    end;
+  end;
+end;
+
+// http://www.scalabium.com/faq/dct0020.htm
+procedure SetPrinterSettings(FPrinter: TPrinter);
+var
+  FDevice: pchar;
+  FDriver: pchar;
+  FPort: pchar;
+  DeviceMode: THandle;
+  DevMode: PDeviceMode;
+begin
+  DeviceMode := 0;
+  DevMode := nil;
+  FDevice := StrAlloc(255);
+  FDriver := StrAlloc(255);
+  FPort := StrAlloc(255);
+  try
+    //to get a current printer settings
+    FPrinter.GetPrinter(FDevice, FDriver, FPort, DeviceMode);
+    //lock a printer device
+    DevMode := GlobalLock(DeviceMode);
+
+    //set a paper size as A4-Transverse
+    DevMode^.dmFields := DevMode^.dmFields or DM_PAPERSIZE or DM_PAPERLENGTH or DM_PAPERWIDTH or DM_PANNINGWIDTH or DM_PANNINGHEIGHT;
+    DevMode^.dmPaperSize := DMPAPER_USER;
+    DevMode^.dmPaperWidth := 50 * 10;
+    DevMode^.dmPaperLength := 11 * 10;
+    DevMode^.dmPanningWidth := 0;//30 * 10;
+    DevMode^.dmPanningHeight := 0;//30 * 10;
+
+    {
+    //set a paper source as Tractor bin
+      DevMode^.dmFields := DevMode^.dmFields or DM_DEFAULTSOURCE;
+      DevMode^.dmDefaultSource := DMBIN_TRACTOR;
+    }
+
+    //set a Landscape orientation
+    {
+    begin
+      DevMode^.dmFields := DevMode^.dmFields or DM_ORIENTATION;
+      DevMode^.dmOrientation := DMORIENT_LANDSCAPE;
+    end;
+    }
+
+    //set a printer settings
+    FPrinter.SetPrinter(FDevice, FDriver, FPort, DeviceMode);
+
+    //unlock a device
+    GlobalUnlock(DeviceMode);
+  finally
+    StrDispose(FDevice);
+    StrDispose(FDriver);
+    StrDispose(FPort);
+  end;
 end;
 
 procedure TForm1.LeftMarginEditKeyPress(Sender: TObject; var Key: char);
@@ -157,6 +262,106 @@ begin
   WmfCanvas.Free;
 end;
 
+procedure TForm1.DrawDemoImage2;
+var
+  coeff: double;
+  outputareaprinter: TRect;
+  WmfCanvas: TMetafileCanvas;
+  x, y:  integer;
+  countx, county: integer;
+  zCMX, zCMY: integer;
+begin
+  coeff := printerResX * 0.001;
+  outputareaprinter := Rect(round(outputarea.Left * coeff),
+    round(outputarea.Top * coeff),
+    round(outputarea.Right * coeff),
+    round(outputarea.Bottom * coeff));
+
+  WmfCanvas := TMetafileCanvas.Create(WmfPage, 0);
+
+    {specify font height in cm}
+  WmfCanvas.Font.Name := 'Times New Roman';
+  WmfCanvas.Font.Height := TextHeightScreen2Printer(10, printerResY);
+    {paint page white}
+  WmfCanvas.Brush.Color := RGB(255, 255, 255);
+  WmfCanvas.Brush.Style := bsSolid;
+  WmfCanvas.FillRect(Rect(0, 0, Printer.PageWidth, Printer.PageHeight));
+
+  WmfCanvas.Pen.Color := clGray;
+  WmfCanvas.Pen.Style := psSolid;
+  WmfCanvas.Pen.Width := 10;
+
+  zCMX := round(Cm2Pixel(2, printerResX));
+  zCMY := round(Cm2Pixel(1, printerResY));
+  countx := round(Printer.PageWidth / zCMX);
+  county := round(Printer.PageHeight / zCMY);
+
+  for x := 0 to countx - 1 do
+    for y := 0 to county - 1 do
+    begin
+     {draw the text}
+      WmfCanvas.TextOut(round(x * zCMX + zCMX * 0.1), round(y * zCMY + zCMY * 0.1), Format('%d, %d', [x, y]));
+      with WmfCanvas do
+      begin
+        MoveTo(zCMX * x, zCMY * (y + 1));
+        LineTo(zCMX * (x + 1), zCMY * (y + 1));
+        MoveTo(zCMX * (x + 1), zCMY * y);
+        LineTo(zCMX * (x + 1), zCMY * (y + 1));
+      end;
+    end;
+  WmfCanvas.Free;
+end;
+
+procedure TForm1.DrawDemoImage3;
+var
+  coeff: double;
+  outputareaprinter: TRect;
+  WmfCanvas: TMetafileCanvas;
+  x, y:  integer;
+  countx, county: integer;
+  zCMX, zCMY: integer;
+begin
+  coeff := printerResX * 0.001;
+  outputareaprinter := Rect(round(outputarea.Left * coeff),
+    round(outputarea.Top * coeff),
+    round(outputarea.Right * coeff),
+    round(outputarea.Bottom * coeff));
+
+  WmfCanvas := TMetafileCanvas.Create(WmfPage, 0);
+
+    {specify font height in cm}
+  WmfCanvas.Font.Name := 'Times New Roman';
+  WmfCanvas.Font.Height := TextHeightScreen2Printer(10, printerResY);
+    {paint page white}
+  WmfCanvas.Brush.Color := RGB(255, 255, 255);
+  WmfCanvas.Brush.Style := bsSolid;
+  WmfCanvas.FillRect(Rect(0, 0, Printer.PageWidth, Printer.PageHeight));
+
+  WmfCanvas.Pen.Color := clGray;
+  WmfCanvas.Pen.Style := psSolid;
+  WmfCanvas.Pen.Width := 10;
+
+  zCMX := round(Cm2Pixel(1, printerResX));
+  zCMY := round(Cm2Pixel(0.5, printerResY));
+  countx := round(Printer.PageWidth / zCMX);
+  county := round(Printer.PageHeight / zCMY);
+
+  for x := 0 to countx - 1 do
+    for y := 0 to county - 1 do
+    begin
+     {draw the text}
+      WmfCanvas.TextOut(round(x * zCMX + zCMX * 0.1), round(y * zCMY + zCMY * 0.1), Format('%d, %d', [x, y]));
+      with WmfCanvas do
+      begin
+        MoveTo(zCMX * x, zCMY * (y + 1));
+        LineTo(zCMX * (x + 1), zCMY * (y + 1));
+        MoveTo(zCMX * (x + 1), zCMY * y);
+        LineTo(zCMX * (x + 1), zCMY * (y + 1));
+      end;
+    end;
+  WmfCanvas.Free;
+end;
+
 procedure TForm1.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   FreeAndNil(WmfPage);
@@ -195,6 +400,8 @@ begin
     OrientationRGroup.ItemIndex := 0
   else
     OrientationRGroup.ItemIndex := 1;
+  SetPrinterSettings(Printer);
+  //setPageSize1(5, 1);
   {load test text for display}
   LoadPreviewtext;
 end;
@@ -215,7 +422,8 @@ begin
   WmfPage := TMetafile.Create;
   WmfPage.SetSize(Printer.PageWidth, Printer.PageHeight);
 
-  DrawDemoImage1;
+  //DrawDemoImage1;
+  DrawDemoImage2;
 
   zZOOMCoeff := aZOOM / 100;
   ScreenRect := Rect(0, 0, round(pagewidth * aMonitorDPI * zZOOMCoeff), round(pageheight * aMonitorDPI * zZOOMCoeff));
