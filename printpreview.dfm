@@ -11,7 +11,9 @@ object Form1: TForm1
   Font.Name = 'Arial'
   Font.Style = []
   OldCreateOrder = False
+  OnClose = FormClose
   OnCreate = FormCreate
+  OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 15
   object Panel1: TPanel
@@ -24,9 +26,9 @@ object Form1: TForm1
     object Label1: TLabel
       Left = 7
       Top = 7
-      Width = 78
+      Width = 72
       Height = 15
-      Caption = 'Margins (inch)'
+      Caption = 'Margins (cm)'
     end
     object Label2: TLabel
       Left = 7
@@ -57,11 +59,18 @@ object Form1: TForm1
       Caption = 'Bottom'
     end
     object Label6: TLabel
-      Left = 7
-      Top = 230
+      Left = 15
+      Top = 259
       Width = 54
       Height = 15
       Caption = 'Zoom (%)'
+    end
+    object Label7: TLabel
+      Left = 7
+      Top = 222
+      Width = 65
+      Height = 15
+      Caption = 'DPI monitor'
     end
     object LeftMarginEdit: TEdit
       Left = 53
@@ -96,13 +105,12 @@ object Form1: TForm1
       OnKeyPress = LeftMarginEditKeyPress
     end
     object ApplyMarginsButton: TButton
-      Left = 21
-      Top = 268
+      Left = 29
+      Top = 324
       Width = 121
       Height = 22
       Caption = 'Apply'
       TabOrder = 4
-      OnClick = ApplyMarginsButtonClick
     end
     object OrientationRGroup: TRadioGroup
       Left = 7
@@ -114,65 +122,80 @@ object Form1: TForm1
         'Portrait'
         'Landscape')
       TabOrder = 5
-      OnClick = OrientationRGroupClick
     end
     object ZoomEdit: TEdit
-      Left = 71
-      Top = 226
+      Left = 79
+      Top = 255
       Width = 35
       Height = 23
       TabOrder = 6
-      Text = '70'
+      Text = '100'
+      OnChange = ZoomEditChange
     end
     object ZoomUpDown: TUpDown
-      Left = 106
-      Top = 226
+      Left = 114
+      Top = 255
       Width = 15
       Height = 23
       Associate = ZoomEdit
-      Increment = 10
-      Position = 70
+      Min = 10
+      Max = 1000
+      Position = 100
       TabOrder = 7
-      OnClick = ZoomUpDownClick
     end
     object btPrint: TButton
-      Left = 21
-      Top = 296
+      Left = 29
+      Top = 352
       Width = 121
       Height = 22
       Caption = 'Print'
       TabOrder = 8
       OnClick = btPrintClick
     end
+    object DPIEdit: TEdit
+      Left = 79
+      Top = 219
+      Width = 35
+      Height = 23
+      TabOrder = 9
+      Text = '102'
+      OnChange = DPIEditChange
+    end
+    object UpDown1: TUpDown
+      Left = 114
+      Top = 219
+      Width = 16
+      Height = 23
+      Associate = DPIEdit
+      Min = 50
+      Max = 4801
+      Position = 102
+      TabOrder = 10
+    end
   end
-  object Panel2: TPanel
+  object ScrollBox1: TScrollBox
     Left = 0
     Top = 0
     Width = 557
     Height = 808
+    HorzScrollBar.Smooth = True
+    HorzScrollBar.Style = ssHotTrack
+    HorzScrollBar.Tracking = True
+    VertScrollBar.Smooth = True
+    VertScrollBar.Style = ssHotTrack
+    VertScrollBar.Tracking = True
     Align = alClient
-    Font.Charset = ANSI_CHARSET
-    Font.Color = clWindowText
-    Font.Height = -15
-    Font.Name = 'Times New Roman'
-    Font.Style = []
-    ParentFont = False
     TabOrder = 1
-    object PreviewPaintbox: TPaintBox
-      Left = 1
-      Top = 1
-      Width = 555
-      Height = 806
-      Align = alClient
-      Font.Charset = ANSI_CHARSET
-      Font.Color = clWindowText
-      Font.Height = -37
-      Font.Name = 'Times New Roman'
-      Font.Style = []
-      ParentFont = False
-      OnPaint = PreviewPaintboxPaint
-      ExplicitWidth = 442
-      ExplicitHeight = 398
+    ExplicitLeft = 92
+    ExplicitTop = 296
+    ExplicitWidth = 342
+    ExplicitHeight = 409
+    object ImagePreview: TImage
+      Left = 0
+      Top = 0
+      Width = 105
+      Height = 105
+      AutoSize = True
     end
   end
 end

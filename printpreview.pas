@@ -9,8 +9,6 @@ uses
 type
   TForm1 = class(TForm)
     Panel1: TPanel;
-    Panel2: TPanel;
-    PreviewPaintbox: TPaintBox;
     Label1: TLabel;
     Label2: TLabel;
     LeftMarginEdit: TEdit;
@@ -26,20 +24,29 @@ type
     ZoomEdit: TEdit;
     ZoomUpDown: TUpDown;
     btPrint: TButton;
-    procedure ZoomUpDownClick(Sender: TObject; Button: TUDBtnType);
-    procedure OrientationRGroupClick(Sender: TObject);
+    ScrollBox1: TScrollBox;
+    ImagePreview: TImage;
+    DPIEdit: TEdit;
+    UpDown1: TUpDown;
+    Label7: TLabel;
     procedure LeftMarginEditKeyPress(Sender: TObject; var Key: char);
     procedure FormCreate(Sender: TObject);
-    procedure PreviewPaintboxPaint(Sender: TObject);
-    procedure ApplyMarginsButtonClick(Sender: TObject);
+    procedure InitPrintSettings;
     procedure btPrintClick(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormShow(Sender: TObject);
+    procedure ZoomEditChange(Sender: TObject);
+    procedure DPIEditChange(Sender: TObject);
   private
     { Private declarations }
     PreviewText: string;
-    outputarea:  TRect; {print area in 1/1000 inches}
+    outputarea: TRect; {print area in 1/1000 inches}
     pagewidth, pageheight: double; {printer page dimension in inch}
     printerResX, printerResY: integer; {printer resolution in dots/inch}
     minmarginX, minmarginY: double; {nonprintable margin in inch}
+    WmfPage: TMetafile;
+    procedure InitPrintingCanvas(aMonitorDPI, aZOOM: integer);
+    procedure DrawDemoImage1();
   public
     { Public declarations }
   end;
@@ -49,9 +56,20 @@ var
 
 implementation
 
-uses printers, FullImagePreview;
+uses printers;
 
 {$R *.DFM}
+
+function Cm2Pixel(const CmValue: double; printerResX: integer): double;
+begin
+  result := CmValue * InchPerCm * printerResX;
+end;
+
+function TextHeightScreen2Printer(Height: integer; printerResY: integer): integer;
+begin
+  // соответствие системе СИ: http://verstka.otrok.ru/law/punkt2.html
+  result := round(Height * Cm2Pixel(1, printerResY) * 0.0351);
+end;
 
 procedure TForm1.LeftMarginEditKeyPress(Sender: TObject; var Key: char);
 begin
@@ -59,95 +77,92 @@ begin
     Key := #0;
 end;
 
-procedure TForm1.OrientationRGroupClick(Sender: TObject);
+procedure TForm1.ZoomEditChange(Sender: TObject);
 begin
-  PreviewPaintbox.Invalidate;
+  InitPrintingCanvas(StrToIntDef(DPIEdit.Text, 102), StrToIntDef(ZoomEdit.Text, 100));
 end;
 
 procedure TForm1.btPrintClick(Sender: TObject);
+begin
+  with Printer do
+  begin
+    BeginDoc;
+    Margins.Left := 0;
+    Margins.Top  := 0;
+    Margins.Right := 0;
+    Margins.Bottom := 0;
+    Printer.Canvas.Draw(0, 0, WmfPage);
+    EndDoc;
+  end;
+end;
+
+procedure TForm1.DPIEditChange(Sender: TObject);
+begin
+  InitPrintingCanvas(StrToIntDef(DPIEdit.Text, 102), StrToIntDef(ZoomEdit.Text, 100));
+end;
+
+procedure TForm1.DrawDemoImage1;
 var
   coeff: double;
   outputareaprinter: TRect;
-  WmfPage: TMetafile;
   WmfCanvas: TMetafileCanvas;
-  ScreenRect: TRect;
-
-  function Cm2Pixel(CmValue: double): double;
-  begin
-    result := CmValue * InchPerCm * printerResX;
-  end;
-
-  function TextHeightScreen2Printer(Height: integer): integer;
-  begin
-    // соответствие системе СИ: http://verstka.otrok.ru/law/punkt2.html
-    result := round(Height * Cm2Pixel(1) * 0.0351);
-  end;
-
 begin
-  PreviewPaintbox.OnPaint := nil;
   coeff := printerResX * 0.001;
   outputareaprinter := Rect(round(outputarea.Left * coeff),
     round(outputarea.Top * coeff),
     round(outputarea.Right * coeff),
     round(outputarea.Bottom * coeff));
 
-  WmfPage := TMetafile.Create;
-  WmfPage.SetSize(Printer.PageWidth, Printer.PageHeight);
   WmfCanvas := TMetafileCanvas.Create(WmfPage, 0);
-  try
 
     {specify font height in cm}
-    WmfCanvas.Font.Name := 'Times New Roman';
-    WmfCanvas.Font.Height := TextHeightScreen2Printer(28);
+  WmfCanvas.Font.Name := 'Times New Roman';
+  WmfCanvas.Font.Height := TextHeightScreen2Printer(26, printerResY);
     {paint page white}
-    WmfCanvas.Brush.Color := RGB(255, 235, 235);
-    WmfCanvas.Brush.Style := bsSolid;
-    WmfCanvas.FillRect(Rect(0, 0, Printer.PageWidth, Printer.PageHeight));
+  WmfCanvas.Brush.Color := RGB(255, 235, 235);
+  WmfCanvas.Brush.Style := bsSolid;
+  WmfCanvas.FillRect(Rect(0, 0, Printer.PageWidth, Printer.PageHeight));
     {draw the text}
-    DrawText(WmfCanvas.handle, pchar(PreviewText), Length(PreviewText),
-      outputareaprinter, DT_WORDBREAK or DT_LEFT);
+  DrawText(WmfCanvas.handle, pchar(PreviewText), Length(PreviewText),
+    outputareaprinter, DT_WORDBREAK or DT_LEFT);
     {Draw thin gray lines to mark borders}
-    WmfCanvas.Pen.Color := clGray;
-    WmfCanvas.Pen.Style := psSolid;
-    WmfCanvas.Pen.Width := 10;
+  WmfCanvas.Pen.Color := clGray;
+  WmfCanvas.Pen.Style := psSolid;
+  WmfCanvas.Pen.Width := 10;
 
-    with WmfCanvas do
-    begin
-      MoveTo(round(outputareaprinter.left - Cm2Pixel(1)), outputareaprinter.top);
-      LineTo(round(outputareaprinter.right + Cm2Pixel(1)), outputareaprinter.top);
-      MoveTo(round(outputareaprinter.left - Cm2Pixel(1)), outputareaprinter.bottom);
-      LineTo(round(outputareaprinter.right + Cm2Pixel(1)), outputareaprinter.bottom);
-      MoveTo(outputareaprinter.left, round(outputareaprinter.top - Cm2Pixel(1)));
-      LineTo(outputareaprinter.left, round(outputareaprinter.bottom + Cm2Pixel(1)));
-      MoveTo(outputareaprinter.right, round(outputareaprinter.top - Cm2Pixel(1)));
-      LineTo(outputareaprinter.right, round(outputareaprinter.bottom + Cm2Pixel(1)));
-    end;
-    WmfCanvas.Free;
+  with WmfCanvas do
+  begin
+    MoveTo(round(outputareaprinter.left - Cm2Pixel(1, printerResX)), outputareaprinter.top);
+    LineTo(round(outputareaprinter.right + Cm2Pixel(1, printerResX)), outputareaprinter.top);
+    MoveTo(round(outputareaprinter.left - Cm2Pixel(1, printerResX)), outputareaprinter.bottom);
+    LineTo(round(outputareaprinter.right + Cm2Pixel(1, printerResX)), outputareaprinter.bottom);
+    MoveTo(outputareaprinter.left, round(outputareaprinter.top - Cm2Pixel(1, printerResX)));
+    LineTo(outputareaprinter.left, round(outputareaprinter.bottom + Cm2Pixel(1, printerResX)));
+    MoveTo(outputareaprinter.right, round(outputareaprinter.top - Cm2Pixel(1, printerResX)));
+    LineTo(outputareaprinter.right, round(outputareaprinter.bottom + Cm2Pixel(1, printerResX)));
 
-    // make preview
-    ScreenRect := Rect(0, 0, round(pagewidth * Screen.PixelsPerInch), round(pageheight * Screen.PixelsPerInch));
-    Form2.ImagePreview.SetBounds(0, 0, ScreenRect.Right, ScreenRect.Bottom);
-    Form2.ImagePreview.Picture.Bitmap.SetSize(ScreenRect.Right, ScreenRect.Bottom);
-    Form2.ImagePreview.Picture.Bitmap.Canvas.StretchDraw(ScreenRect, WmfPage);
-
-    with Printer do
-    begin
-      BeginDoc;
-      Printer.Canvas.Draw(0, 0, WmfPage);
-      EndDoc;
-    end;
-
-    Form2.Show;
-
-  finally
-    PreviewPaintbox.OnPaint := PreviewPaintboxPaint;
-    WmfPage.Free;
+    MoveTo(round(outputareaprinter.left + Cm2Pixel(1, printerResX)), outputareaprinter.top +
+      round(Cm2Pixel(1, printerResX)));
+    LineTo(round(outputareaprinter.left + Cm2Pixel(2, printerResX)), outputareaprinter.top +
+      round(Cm2Pixel(1, printerResX)));
+    MoveTo(round(outputareaprinter.left + Cm2Pixel(1, printerResX)), outputareaprinter.top +
+      round(Cm2Pixel(2, printerResX)));
+    LineTo(round(outputareaprinter.left + Cm2Pixel(4, printerResX)), outputareaprinter.top +
+      round(Cm2Pixel(2, printerResX)));
+    MoveTo(round(outputareaprinter.left + Cm2Pixel(1, printerResX)), outputareaprinter.top +
+      round(Cm2Pixel(3, printerResX)));
+    LineTo(round(outputareaprinter.left + Cm2Pixel(8, printerResX)), outputareaprinter.top +
+      round(Cm2Pixel(3, printerResX)));
   end;
+  WmfCanvas.Free;
+end;
+
+procedure TForm1.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  FreeAndNil(WmfPage);
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
-var
-  S: string;
 
   procedure loadpreviewtext;
   var
@@ -155,7 +170,13 @@ var
   begin
     sl := TStringList.Create;
     try
-      sl.Loadfromfile(Extractfilepath(application.exename) + 'printpreview.pas');
+      //sl.Loadfromfile(Extractfilepath(application.exename) + 'printpreview.pas');
+      sl.Add('/*/*/*/*0123456789--*-*-*-*');
+      sl.Add('/*/*/*/*0123456789--*-*-*-*');
+      sl.Add('/*/*/*/*0123456789--*-*-*-*');
+      sl.Add('/*/*/*/*0123456789--*-*-*-*');
+      sl.Add('/*/*/*/*0123456789--*-*-*-*');
+      sl.Add('/*/*/*/*0123456789--*-*-*-*');
       PreviewText := sl.Text;
     finally
       sl.free
@@ -165,11 +186,10 @@ var
 begin
   DoubleBuffered := true;
   {Initialize the margin edits with a margin of 0.75 inch}
-  S := FormatFloat('0.00', 0.75);
-  LeftMarginEdit.Text := S;
-  TopMarginEdit.Text := S;
-  RightMarginEdit.Text := S;
-  BottomMarginEdit.Text := S;
+  TopMarginEdit.Text := FormatFloat('0.00', 3);
+  LeftMarginEdit.Text := FormatFloat('0.00', 2);
+  BottomMarginEdit.Text := FormatFloat('0.00', 1.5);
+  RightMarginEdit.Text := FormatFloat('0.00', 2);
   {Initialize the orientation radio group}
   if Printer.Orientation = poPortrait then
     OrientationRGroup.ItemIndex := 0
@@ -179,70 +199,44 @@ begin
   LoadPreviewtext;
 end;
 
-procedure TForm1.PreviewPaintboxPaint(Sender: TObject);
+procedure TForm1.FormShow(Sender: TObject);
+begin
+  InitPrintingCanvas(StrToIntDef(DPIEdit.Text, 102), StrToIntDef(ZoomEdit.Text, 100));
+end;
+
+procedure TForm1.InitPrintingCanvas(aMonitorDPI, aZOOM: integer);
 var
-  scale: double; {conversion factor, pixels per 1/1000 inch}
+  ScreenRect: TRect;
+  zZOOMCoeff: double;
+begin
+  InitPrintSettings;
 
-  procedure InitPrintSettings;
+  FreeAndNil(WmfPage);
+  WmfPage := TMetafile.Create;
+  WmfPage.SetSize(Printer.PageWidth, Printer.PageHeight);
 
-    function GetMargin(S: string; inX: boolean): double;
+  DrawDemoImage1;
+
+  zZOOMCoeff := aZOOM / 100;
+  ScreenRect := Rect(0, 0, round(pagewidth * aMonitorDPI * zZOOMCoeff), round(pageheight * aMonitorDPI * zZOOMCoeff));
+  ImagePreview.SetBounds(0, 0, ScreenRect.Right, ScreenRect.Bottom);
+  ImagePreview.Picture.Bitmap.SetSize(ScreenRect.Right, ScreenRect.Bottom);
+  ImagePreview.Picture.Bitmap.Canvas.StretchDraw(ScreenRect, WmfPage);
+end;
+
+procedure TForm1.InitPrintSettings;
+
+  function GetMargin(S: string; inX: boolean): double;
+  begin
+    Result := StrToFloat(S);
+    if InX then
     begin
-      Result := StrToFloat(S);
-      if InX then
-      begin
-        if Result < minmarginX then
-          Result := minmarginX;
-      end
-      else
-      if Result < minmarginY then
-        Result := minmarginY;
-    end;
-
-  begin
-    printerResX := GetDeviceCaps(printer.handle, LOGPIXELSX);
-    printerResY := GetDeviceCaps(printer.handle, LOGPIXELSY);
-    pagewidth := GetDeviceCaps(printer.handle, PHYSICALWIDTH) / printerResX;
-    pageheight := GetDeviceCaps(printer.handle, PHYSICALHEIGHT) / printerResY;
-    minmarginX := GetDeviceCaps(printer.handle, PHYSICALOFFSETX) / printerResX;
-    minmarginY := GetDeviceCaps(printer.handle, PHYSICALOFFSETY) / printerResY;
-    outputarea.Left := Round(GetMargin(LeftMarginEdit.Text, true) * 1000);
-    outputarea.Top := Round(GetMargin(TopMarginEdit.Text, false) * 1000);
-    outputarea.Right := Round((pagewidth - GetMargin(RightMarginEdit.Text, true)) *
-      1000);
-    outputarea.Bottom := Round((pageheight - GetMargin(BottomMarginEdit.Text, false)) * 1000);
-  end;
-
-  procedure ScaleCanvas(Canvas: TCanvas; widthavail, heightavail: integer);
-  var
-    needpixelswidth, needpixelsheight: integer;
-    {dimensions of preview at current zoom factor in pixels}
-    orgpixels: TPoint;
-    {origin of preview in pixels}
-  begin
-    {set up a coordinate system for the canvas that uses 1/1000 inch as unit,
-    honors the zoom factor and maintains the MM_TEXT orientation of the
-    coordinate axis (origin in top left corner, positive Y axis points down}
-    scale := Screen.PixelsPerInch / 1000;
-    {Apply zoom factor}
-    scale := scale * StrToInt(Zoomedit.text) / 100;
-    {figure out size of preview}
-    needpixelswidth := Round(pagewidth * 1000 * scale);
-    needpixelsheight := Round(pageheight * 1000 * scale);
-    if needpixelswidth >= widthavail then
-      orgpixels.X := 0
+      if Result < minmarginX then
+        Result := minmarginX;
+    end
     else
-      orgpixels.X := (widthavail - needpixelswidth) div 2;
-    if needpixelsheight >= heightavail then
-      orgpixels.Y := 0
-    else
-      orgpixels.Y := (heightavail - needpixelsheight) div 2;
-    {change mapping mode to MM_ISOTROPIC}
-    SetMapMode(canvas.handle, MM_ISOTROPIC);
-    {move viewport origin to orgpixels}
-    SetViewportOrgEx(canvas.handle, orgpixels.x, orgpixels.y, nil);
-    {scale the window}
-    SetViewportExtEx(canvas.handle, Round(1000 * scale), Round(1000 * scale), nil);
-    SetWindowExtEx(canvas.handle, 1000, 1000, nil);
+    if Result < minmarginY then
+      Result := minmarginY;
   end;
 
 begin
@@ -250,46 +244,23 @@ begin
     Printer.Orientation := poPortrait
   else
     Printer.Orientation := poLandscape;
-  InitPrintsettings;
-  with Sender as TPaintBox do
-  begin
-    ScaleCanvas(Canvas, ClientWidth, ClientHeight);
-    Canvas.Font.Name := 'Times New Roman';
-    {specify font height in 1/1000 inch}
-    Canvas.Font.Height := Round((font.height * (10.6 / 12)) / font.pixelsperinch * 1000);
-    {paint page white}
-    Canvas.Brush.Color := clWindow;
-    Canvas.Brush.Style := bsSolid;
-    Canvas.FillRect(Rect(0, 0, Round(pagewidth * 1000), Round(pageheight * 1000)));
-    {draw the text}
-    DrawText(canvas.handle, pchar(PreviewText), Length(PreviewText),
-      outputarea, DT_WORDBREAK or DT_LEFT);
-    {Draw thin gray lines to mark borders}
-    Canvas.Pen.Color := clGray;
-    Canvas.Pen.Style := psSolid;
-    Canvas.Pen.Width := 10;
-    with Canvas do
-    begin
-      MoveTo(outputarea.left - 100, outputarea.top);
-      LineTo(outputarea.right + 100, outputarea.top);
-      MoveTo(outputarea.left - 100, outputarea.bottom);
-      LineTo(outputarea.right + 100, outputarea.bottom);
-      MoveTo(outputarea.left, outputarea.top - 100);
-      LineTo(outputarea.left, outputarea.bottom + 100);
-      MoveTo(outputarea.right, outputarea.top - 100);
-      LineTo(outputarea.right, outputarea.bottom + 100);
-    end;
-  end;
-end;
 
-procedure TForm1.ZoomUpDownClick(Sender: TObject; Button: TUDBtnType);
-begin
-  PreviewPaintbox.Invalidate;
-end;
+    //Получить разрешение
+  printerResX := GetDeviceCaps(printer.handle, LOGPIXELSX);
+  printerResY := GetDeviceCaps(printer.handle, LOGPIXELSY);
+    //pagewidth := (GetDeviceCaps(printer.handle, PHYSICALWIDTH)) / printerResX;
+    //pageheight := GetDeviceCaps(printer.handle, PHYSICALHEIGHT) / printerResY;
+    //Получение размера листа в мм
+  pagewidth := InchPerMM * GetDeviceCaps(printer.handle, HORZSIZE);
+  pageheight := InchPerMM * GetDeviceCaps(printer.handle, VERTSIZE);
 
-procedure TForm1.ApplyMarginsButtonClick(Sender: TObject);
-begin
-  PreviewPaintbox.Invalidate;
+  minmarginX := GetDeviceCaps(printer.handle, PHYSICALOFFSETX) / printerResX;
+  minmarginY := GetDeviceCaps(printer.handle, PHYSICALOFFSETY) / printerResY;
+  outputarea.Left := Round(InchPerCm * GetMargin(LeftMarginEdit.Text, true) * 1000);
+  outputarea.Top := Round(InchPerCm * GetMargin(TopMarginEdit.Text, false) * 1000);
+  outputarea.Right := Round((pagewidth - InchPerCm * GetMargin(RightMarginEdit.Text, true)) *
+    1000);
+  outputarea.Bottom := Round((pageheight - InchPerCm * GetMargin(BottomMarginEdit.Text, false)) * 1000);
 end;
 
 end.
