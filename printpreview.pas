@@ -6,6 +6,9 @@ uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
   StdCtrls, ExtCtrls, ComCtrls, U_PaperDimensions, WinSpool;
 
+const
+  GPagePrecission = 10000;
+
 type
   TForm1 = class(TForm)
     Panel1: TPanel;
@@ -214,7 +217,7 @@ var
   outputareaprinter: TRect;
   WmfCanvas: TMetafileCanvas;
 begin
-  coeff := printerResX * 0.001;
+  coeff := printerResX * (1.0 / GPagePrecission);
   outputareaprinter := Rect(round(outputarea.Left * coeff),
     round(outputarea.Top * coeff),
     round(outputarea.Right * coeff),
@@ -273,7 +276,7 @@ var
   countx, county: integer;
   zCMX, zCMY: integer;
 begin
-  coeff := printerResX * 0.001;
+  coeff := printerResX * (1.0 / GPagePrecission);
   outputareaprinter := Rect(round(outputarea.Left * coeff),
     round(outputarea.Top * coeff),
     round(outputarea.Right * coeff),
@@ -319,11 +322,23 @@ var
   coeff: double;
   outputareaprinter: TRect;
   WmfCanvas: TMetafileCanvas;
-  x, y:  integer;
-  countx, county: integer;
-  zCMX, zCMY: integer;
+  y:  integer;
+  zcounty: integer;
+  zCMY: integer;
+  zcoeffx, zcoeffy: double;
+
+  function mm2pixelX(const Xmm: double): integer;
+  begin
+    result := round(zcoeffx * Xmm);
+  end;
+
+  function mm2pixelY(const Ymm: double): integer;
+  begin
+    result := round(zcoeffy * Ymm);
+  end;
+
 begin
-  coeff := printerResX * 0.001;
+  coeff := printerResX * (1.0 / GPagePrecission);
   outputareaprinter := Rect(round(outputarea.Left * coeff),
     round(outputarea.Top * coeff),
     round(outputarea.Right * coeff),
@@ -337,30 +352,27 @@ begin
     {paint page white}
   WmfCanvas.Brush.Color := RGB(255, 255, 255);
   WmfCanvas.Brush.Style := bsSolid;
-  WmfCanvas.FillRect(Rect(0, 0, Printer.PageWidth, Printer.PageHeight));
+  WmfCanvas.FillRect(Rect(0, 0, Printer.PageWidth - 1, Printer.PageHeight - 1));
 
-  WmfCanvas.Pen.Color := clGray;
+  WmfCanvas.Pen.Color := clBlack;
   WmfCanvas.Pen.Style := psSolid;
-  WmfCanvas.Pen.Width := 10;
+  WmfCanvas.Pen.Width := 1;
 
-  zCMX := round(Cm2Pixel(1, printerResX));
-  zCMY := round(Cm2Pixel(0.5, printerResY));
-  countx := round(Printer.PageWidth / zCMX);
-  county := round(Printer.PageHeight / zCMY);
+  zcoeffx := Cm2Pixel(1, printerResX) / 10;
+  zcoeffy := Cm2Pixel(1, printerResY) / 10;
+  zCMY := round(Cm2Pixel(1, printerResY));
+  zcounty := round(Printer.PageHeight / zCMY);
 
-  for x := 0 to countx - 1 do
-    for y := 0 to county - 1 do
-    begin
+  for y := 0 to zcounty - 1 do
+  begin
      {draw the text}
-      WmfCanvas.TextOut(round(x * zCMX + zCMX * 0.1), round(y * zCMY + zCMY * 0.1), Format('%d, %d', [x, y]));
-      with WmfCanvas do
-      begin
-        MoveTo(zCMX * x, zCMY * (y + 1));
-        LineTo(zCMX * (x + 1), zCMY * (y + 1));
-        MoveTo(zCMX * (x + 1), zCMY * y);
-        LineTo(zCMX * (x + 1), zCMY * (y + 1));
-      end;
-    end;
+    WmfCanvas.Rectangle(Rect(mm2pixelX(3), mm2pixelY(1.5 + y * (8 + 3)), mm2pixelX(3 + 20),
+      mm2pixelY(1.5 + 8 + y * (8 + 3))));
+    WmfCanvas.Rectangle(Rect(mm2pixelX(3 + 20 + 3), mm2pixelY(1.5 + y * (8 + 3)),
+      mm2pixelX(3 + 20 + 3 + 20), mm2pixelY(1.5 + 8 + y * (8 + 3))));
+    WmfCanvas.TextOut(mm2pixelX(3 + 1), mm2pixelY(1.5 + 1 + y * (8 + 3)), Format('%d, %d', [1, y]));
+    WmfCanvas.TextOut(mm2pixelX(3 + 20 + 3 + 1), mm2pixelY(1.5 + 1 + y * (8 + 3)), Format('%d, %d', [2, y]));
+  end;
   WmfCanvas.Free;
 end;
 
@@ -470,11 +482,11 @@ begin
 
   minmarginX := GetDeviceCaps(printer.handle, PHYSICALOFFSETX) / printerResX;
   minmarginY := GetDeviceCaps(printer.handle, PHYSICALOFFSETY) / printerResY;
-  outputarea.Left := Round(InchPerCm * GetMargin(LeftMarginEdit.Text, true) * 1000);
-  outputarea.Top := Round(InchPerCm * GetMargin(TopMarginEdit.Text, false) * 1000);
+  outputarea.Left := Round(InchPerCm * GetMargin(LeftMarginEdit.Text, true) * GPagePrecission);
+  outputarea.Top := Round(InchPerCm * GetMargin(TopMarginEdit.Text, false) * GPagePrecission);
   outputarea.Right := Round((pagewidth - InchPerCm * GetMargin(RightMarginEdit.Text, true)) *
-    1000);
-  outputarea.Bottom := Round((pageheight - InchPerCm * GetMargin(BottomMarginEdit.Text, false)) * 1000);
+    GPagePrecission);
+  outputarea.Bottom := Round((pageheight - InchPerCm * GetMargin(BottomMarginEdit.Text, false)) * GPagePrecission);
 end;
 
 end.
