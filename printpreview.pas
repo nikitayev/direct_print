@@ -29,14 +29,18 @@ type
     DPIEdit: TEdit;
     UpDown1: TUpDown;
     Label7: TLabel;
+    Label8: TLabel;
+    Label9: TLabel;
+    edPaperWidth: TEdit;
+    Label10: TLabel;
+    edPaperHeight: TEdit;
     procedure LeftMarginEditKeyPress(Sender: TObject; var Key: char);
     procedure FormCreate(Sender: TObject);
     procedure InitPrintSettings;
     procedure btPrintClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormShow(Sender: TObject);
-    procedure ZoomEditChange(Sender: TObject);
-    procedure DPIEditChange(Sender: TObject);
+    procedure ApplyMarginsButtonClick(Sender: TObject);
   private
     { Private declarations }
     PreviewText: string;
@@ -123,7 +127,8 @@ begin
 end;
 
 // http://www.scalabium.com/faq/dct0020.htm
-procedure SetPrinterSettings(FPrinter: TPrinter);
+// https://www.youtube.com/watch?v=gX0Zb_VEwNc
+procedure SetPrinterSettings(FPrinter: TPrinter; aPaperWidthMM, aPaperHeightMM: integer);
 var
   FDevice: pchar;
   FDriver: pchar;
@@ -143,12 +148,13 @@ begin
     DevMode := GlobalLock(DeviceMode);
 
     //set a paper size as A4-Transverse
-    DevMode^.dmFields := DevMode^.dmFields or DM_PAPERSIZE or DM_PAPERLENGTH or DM_PAPERWIDTH or DM_PANNINGWIDTH or DM_PANNINGHEIGHT;
+    DevMode^.dmFields := DevMode^.dmFields or DM_PAPERSIZE or DM_PAPERLENGTH or DM_PAPERWIDTH or
+      DM_PANNINGWIDTH or DM_PANNINGHEIGHT;
     DevMode^.dmPaperSize := DMPAPER_USER;
-    DevMode^.dmPaperWidth := 50 * 10;
-    DevMode^.dmPaperLength := 11 * 10;
-    DevMode^.dmPanningWidth := 0;//30 * 10;
-    DevMode^.dmPanningHeight := 0;//30 * 10;
+    DevMode^.dmPaperWidth := aPaperWidthMM * 10;
+    DevMode^.dmPaperLength := aPaperHeightMM * 10;
+    DevMode^.dmPanningWidth := 0;
+    DevMode^.dmPanningHeight := 0;
 
     {
     //set a paper source as Tractor bin
@@ -182,8 +188,9 @@ begin
     Key := #0;
 end;
 
-procedure TForm1.ZoomEditChange(Sender: TObject);
+procedure TForm1.ApplyMarginsButtonClick(Sender: TObject);
 begin
+  SetPrinterSettings(Printer, StrToIntDef(edPaperWidth.Text, 210), StrToIntDef(edPaperHeight.Text, 297));
   InitPrintingCanvas(StrToIntDef(DPIEdit.Text, 102), StrToIntDef(ZoomEdit.Text, 100));
 end;
 
@@ -199,11 +206,6 @@ begin
     Printer.Canvas.Draw(0, 0, WmfPage);
     EndDoc;
   end;
-end;
-
-procedure TForm1.DPIEditChange(Sender: TObject);
-begin
-  InitPrintingCanvas(StrToIntDef(DPIEdit.Text, 102), StrToIntDef(ZoomEdit.Text, 100));
 end;
 
 procedure TForm1.DrawDemoImage1;
@@ -400,7 +402,7 @@ begin
     OrientationRGroup.ItemIndex := 0
   else
     OrientationRGroup.ItemIndex := 1;
-  SetPrinterSettings(Printer);
+  //SetPrinterSettings(Printer);
   //setPageSize1(5, 1);
   {load test text for display}
   LoadPreviewtext;
@@ -408,6 +410,7 @@ end;
 
 procedure TForm1.FormShow(Sender: TObject);
 begin
+  SetPrinterSettings(Printer, StrToIntDef(edPaperWidth.Text, 210), StrToIntDef(edPaperHeight.Text, 297));
   InitPrintingCanvas(StrToIntDef(DPIEdit.Text, 102), StrToIntDef(ZoomEdit.Text, 100));
 end;
 
@@ -427,6 +430,9 @@ begin
 
   zZOOMCoeff := aZOOM / 100;
   ScreenRect := Rect(0, 0, round(pagewidth * aMonitorDPI * zZOOMCoeff), round(pageheight * aMonitorDPI * zZOOMCoeff));
+  edPaperWidth.Text := IntToStr(round(pagewidth * mmPerInch));
+  edPaperHeight.Text := IntToStr(round(pageheight * mmPerInch));
+
   ImagePreview.SetBounds(0, 0, ScreenRect.Right, ScreenRect.Bottom);
   ImagePreview.Picture.Bitmap.SetSize(ScreenRect.Right, ScreenRect.Bottom);
   ImagePreview.Picture.Bitmap.Canvas.StretchDraw(ScreenRect, WmfPage);

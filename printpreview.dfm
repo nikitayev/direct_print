@@ -72,6 +72,27 @@ object Form1: TForm1
       Height = 15
       Caption = 'DPI monitor'
     end
+    object Label8: TLabel
+      Left = 7
+      Top = 287
+      Width = 91
+      Height = 15
+      Caption = 'Paper size (mm)'
+    end
+    object Label9: TLabel
+      Left = 7
+      Top = 320
+      Width = 31
+      Height = 15
+      Caption = 'Width'
+    end
+    object Label10: TLabel
+      Left = 7
+      Top = 348
+      Width = 36
+      Height = 15
+      Caption = 'Height'
+    end
     object LeftMarginEdit: TEdit
       Left = 53
       Top = 35
@@ -105,12 +126,13 @@ object Form1: TForm1
       OnKeyPress = LeftMarginEditKeyPress
     end
     object ApplyMarginsButton: TButton
-      Left = 29
-      Top = 324
+      Left = 21
+      Top = 380
       Width = 121
       Height = 22
       Caption = 'Apply'
       TabOrder = 4
+      OnClick = ApplyMarginsButtonClick
     end
     object OrientationRGroup: TRadioGroup
       Left = 7
@@ -130,7 +152,6 @@ object Form1: TForm1
       Height = 23
       TabOrder = 6
       Text = '100'
-      OnChange = ZoomEditChange
     end
     object ZoomUpDown: TUpDown
       Left = 114
@@ -144,8 +165,8 @@ object Form1: TForm1
       TabOrder = 7
     end
     object btPrint: TButton
-      Left = 29
-      Top = 352
+      Left = 21
+      Top = 408
       Width = 121
       Height = 22
       Caption = 'Print'
@@ -159,7 +180,6 @@ object Form1: TForm1
       Height = 23
       TabOrder = 9
       Text = '102'
-      OnChange = DPIEditChange
     end
     object UpDown1: TUpDown
       Left = 114
@@ -171,6 +191,24 @@ object Form1: TForm1
       Max = 4801
       Position = 102
       TabOrder = 10
+    end
+    object edPaperWidth: TEdit
+      Left = 53
+      Top = 315
+      Width = 88
+      Height = 23
+      TabOrder = 11
+      Text = '210'
+      OnKeyPress = LeftMarginEditKeyPress
+    end
+    object edPaperHeight: TEdit
+      Left = 53
+      Top = 344
+      Width = 88
+      Height = 23
+      TabOrder = 12
+      Text = '297'
+      OnKeyPress = LeftMarginEditKeyPress
     end
   end
   object ScrollBox1: TScrollBox
@@ -186,10 +224,6 @@ object Form1: TForm1
     VertScrollBar.Tracking = True
     Align = alClient
     TabOrder = 1
-    ExplicitLeft = 92
-    ExplicitTop = 296
-    ExplicitWidth = 342
-    ExplicitHeight = 409
     object ImagePreview: TImage
       Left = 0
       Top = 0
